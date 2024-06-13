@@ -23,37 +23,36 @@ class RecursiveSpectralClustering:
             return [indices]
         m = round(n/k)
         temp_clusters = self.__get_clusters(X)
-        L = len(temp_clusters[0])
-        R = len(temp_clusters[1])
-        if L%m == 0 or R%m == 0:
-            indices_L = temp_clusters[0]
-            indices_R = temp_clusters[1]
-        else:
-            if L > R:
+        l_ids = temp_clusters[0]
+        r_ids = temp_clusters[1]
+        l = len(l_ids)
+        r = len(r_ids)
+        if l%m != 0 and r%m != 0:
+            if l > r:
                 total_scores = {}
-                for i in temp_clusters[0]:
+                for i in l_ids:
                     total_scores[i] = 0
-                    for j in temp_clusters[1]:
+                    for j in r_ids:
                         total_scores[i] += X[i][j] + X[j][i]
                 sorted_scores = sorted(total_scores.items(), key=lambda x: x[1], reverse=True)
-                indices_L = [i for i, _ in sorted_scores[L%m:]]
-                indices_R = temp_clusters[1] + [i for i, _ in sorted_scores[:L%m]]
+                l_ids = [i for i, _ in sorted_scores[l%m:]]
+                r_ids = r_ids + [i for i, _ in sorted_scores[:l%m]]
             else:
                 total_scores = {}
-                for i in temp_clusters[1]:
+                for i in r_ids:
                     total_scores[i] = 0
-                    for j in temp_clusters[0]:
+                    for j in l_ids:
                         total_scores[i] += X[i][j] + X[j][i]
                 sorted_scores = sorted(total_scores.items(), key=lambda x: x[1], reverse=True)
-                indices_L = temp_clusters[0] + [i for i, _ in sorted_scores[:R%m]]
-                indices_R = [i for i, _ in sorted_scores[R%m:]]
-        k1 = min(k-1, round(len(indices_L)/(len(indices_L) + len(indices_R))*k))
-        k2 = k - k1
-        P = X[indices_L][:, indices_L]
-        Q = X[indices_R][:, indices_R]
-        temp_clusters_L = self.__recursive_clustering(P.shape[0], k1, P, A, [indices[i] for i in indices_L])
-        temp_clusters_R = self.__recursive_clustering(Q.shape[0], k2, Q, A, [indices[i] for i in indices_R])
-        clusters = temp_clusters_L + temp_clusters_R
+                l_ids = l_ids + [i for i, _ in sorted_scores[:r%m]]
+                r_ids = [i for i, _ in sorted_scores[r%m:]]
+        l_k = round(len(l_ids)/(len(l_ids) + len(r_ids))*k)
+        r_k = k - l_k
+        l_X = X[l_ids][:, l_ids]
+        r_X = X[r_ids][:, r_ids]
+        l_clusters = self.__recursive_clustering(l_X.shape[0], l_k, l_X, A, [indices[i] for i in l_ids])
+        r_clusters = self.__recursive_clustering(r_X.shape[0], r_k, r_X, A, [indices[i] for i in r_ids])
+        clusters = l_clusters + r_clusters
         return clusters
 
     def fit(self, X):
